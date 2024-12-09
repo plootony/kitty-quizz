@@ -51,11 +51,11 @@ watch([selectedGenre, selectedDecade, selectedDifficulty], () => {
 </script>
 
 <template>
-  <div class="filters-container">
+  <div class="filter-container">
     <!-- Фильтр по жанру -->
     <div class="filter-group">
-      <label>Жанр</label>
-      <select v-model="selectedGenre">
+      <label class="filter-label">Жанр</label>
+      <select v-model="selectedGenre" class="filter-select">
         <option 
           v-for="genre in genres" 
           :key="genre.value" 
@@ -68,8 +68,8 @@ watch([selectedGenre, selectedDecade, selectedDifficulty], () => {
 
     <!-- Фильтр по десятилетию -->
     <div class="filter-group">
-      <label>Десятилетие</label>
-      <select v-model="selectedDecade">
+      <label class="filter-label">Десятилетие</label>
+      <select v-model="selectedDecade" class="filter-select">
         <option 
           v-for="decade in decades" 
           :key="decade.value" 
@@ -82,8 +82,8 @@ watch([selectedGenre, selectedDecade, selectedDifficulty], () => {
 
     <!-- Фильтр по сложности -->
     <div class="filter-group">
-      <label>Сложность</label>
-      <select v-model="selectedDifficulty">
+      <label class="filter-label">Сложность</label>
+      <select v-model="selectedDifficulty" class="filter-select">
         <option 
           v-for="difficulty in difficulties" 
           :key="difficulty.value" 
@@ -97,13 +97,16 @@ watch([selectedGenre, selectedDecade, selectedDifficulty], () => {
 </template>
 
 <style scoped>
-.filters-container {
-  display: flex;
-  gap: 20px;
+.filter-container {
+  background: rgba(255, 255, 255, 0.05);
   padding: 20px;
-  background: #f5f5f5;
-  border-radius: 8px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  border: 1px solid rgba(255, 105, 180, 0.2);
 }
 
 .filter-group {
@@ -112,21 +115,75 @@ watch([selectedGenre, selectedDecade, selectedDifficulty], () => {
   gap: 8px;
 }
 
-label {
-  font-size: 14px;
-  color: #666;
+.filter-label {
+  font-size: 0.9em;
+  color: #ff69b4;
+  font-weight: 500;
 }
 
-select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  min-width: 160px;
-  background: white;
+.filter-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 105, 180, 0.3);
+  border-radius: 8px;
+  font-size: 1em;
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ff69b4' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
 }
 
-select:focus {
+.filter-select:hover {
+  border-color: #ff69b4;
+  background-color: rgba(255, 105, 180, 0.1);
+}
+
+.filter-select:focus {
   outline: none;
-  border-color: #666;
+  border-color: #ff69b4;
+  box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.2);
+}
+
+.filter-select option {
+  background-color: #1a1a1a;
+  color: #fff;
+  padding: 8px;
+}
+
+/* Адаптивный дизайн */
+@media (max-width: 768px) {
+  .filter-container {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .filter-group {
+    margin-bottom: 0;
+  }
+}
+
+/* Анимации */
+.filter-select {
+  transition: all 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.filter-container {
+  animation: fadeIn 0.3s ease-out;
 }
 </style> 

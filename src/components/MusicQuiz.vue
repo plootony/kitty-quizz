@@ -6,14 +6,6 @@ const props = defineProps({
   tracks: {
     type: Array,
     required: true
-  },
-  filters: {
-    type: Object,
-    default: () => ({
-      genre: '',
-      decade: '',
-      difficulty: ''
-    })
   }
 })
 
@@ -25,6 +17,8 @@ const timeLeft = ref(15)
 const deviceId = ref(null)
 const playerReady = ref(false)
 const usedArtists = ref(new Set())
+
+const emit = defineEmits(['game-state-change'])
 
 // Получаем треки с уникальными артистами
 const availableTracks = computed(() => {
@@ -63,10 +57,6 @@ const initializePlayer = async () => {
       playerReady.value = true
     })
 
-    player.value.addListener('player_state_changed', state => {
-      console.log('Player State Changed', state)
-    })
-
     player.value.addListener('not_ready', ({ device_id }) => {
       console.log('Device ID has gone offline', device_id)
       playerReady.value = false
@@ -90,6 +80,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  emit('game-state-change', false)
   if (player.value) {
     player.value.disconnect()
   }
@@ -102,6 +93,9 @@ const startNewRound = async () => {
     console.error('Player not ready')
     return
   }
+
+  // Сообщаем что игра началась
+  emit('game-state-change', true)
 
   // Проверяем, есть ли доступные треки
   if (availableTracks.value.length === 0) {
@@ -240,8 +234,10 @@ const revealAnswer = () => {
         </div>
         
         <div v-else class="question">
-          <div class="placeholder-image">
-            <span>?</span>
+          <div class="placeholder-container">
+            <div class="placeholder-content">
+              <span class="question-mark">?</span>
+            </div>
           </div>
           <button @click="revealAnswer" class="reveal-btn">
             Показать ответ
@@ -250,20 +246,23 @@ const revealAnswer = () => {
       </div>
     </div>
   </div>
-</template>
+</template> 
 
 <style scoped>
 .quiz-container {
+  max-width: 800px;
+  margin: 0 auto;
   padding: 20px;
-  background: #f5f5f5;
-  border-radius: 8px;
-  margin: 20px 0;
+  color: #fff;
 }
 
 .error-message {
-  color: #ff4444;
-  text-align: center;
+  background-color: rgba(211, 47, 47, 0.2);
+  border: 1px solid #d32f2f;
+  border-radius: 8px;
   padding: 20px;
+  text-align: center;
+  color: #ff6b6b;
 }
 
 .quiz-content {
@@ -275,65 +274,183 @@ const revealAnswer = () => {
 
 .start-screen {
   text-align: center;
+  padding: 40px;
 }
 
-.timer {
-  font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 20px;
+.start-screen h2 {
+  color: #ff69b4; /* Hot Pink */
+  margin-bottom: 16px;
+}
+
+.start-btn {
+  background-color: #ff69b4;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.start-btn:hover {
+  background-color: #ff1493; /* Deep Pink */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
 }
 
 .game-screen {
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 20px;
 }
 
-.answer, .question {
+.timer {
+  font-size: 2em;
+  font-weight: bold;
+  color: #ff69b4;
+  text-shadow: 0 0 10px rgba(255, 105, 180, 0.3);
+}
+
+.answer {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 15px;
+  animation: fadeIn 0.3s ease-in;
 }
 
 .track-image {
   width: 200px;
   height: 200px;
   border-radius: 8px;
+  box-shadow: 0 0 20px rgba(255, 105, 180, 0.3);
   object-fit: cover;
-}
-
-.placeholder-image {
-  width: 200px;
-  height: 200px;
-  background: #ddd;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 48px;
-  color: #666;
+  animation: pulseShadow 3s ease-in-out infinite;
 }
 
 .track-info {
   text-align: center;
 }
 
-button {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  color: white;
+.track-info h3 {
+  margin: 0;
+  font-size: 1.4em;
+  color: #ff69b4;
 }
 
-.start-btn, .next-btn {
-  background: #44aa44;
+.track-info p {
+  margin: 5px 0 0;
+  color: #ccc;
+}
+
+.question {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.placeholder-container {
+  width: 200px;
+  height: 200px;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 0 20px rgba(255, 105, 180, 0.3);
+  animation: pulseShadow 3s ease-in-out infinite;
+}
+
+.placeholder-content {
+  width: 100%;
+  height: 100%;
+  background-color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.question-mark {
+  font-size: 5em;
+  font-weight: bold;
+  background: linear-gradient(45deg, #ff69b4, #ff1493);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 5px rgba(255, 105, 180, 0.7));
 }
 
 .reveal-btn {
-  background: #666;
+  background-color: transparent;
+  color: #ff69b4;
+  border: 2px solid #ff69b4;
+  padding: 10px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.reveal-btn:hover {
+  background-color: #ff69b4;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Адаптивный дизайн */
+@media (max-width: 600px) {
+  .quiz-container {
+    padding: 10px;
+  }
+
+  .track-image,
+  .placeholder-container {
+    width: 150px;
+    height: 150px;
+  }
+
+  .timer {
+    font-size: 1.5em;
+  }
+
+  .track-info h3 {
+    font-size: 1.2em;
+  }
+
+  .placeholder-container {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .question-mark {
+    font-size: 4em;
+  }
+}
+
+/* Добавляем анимацию пульсации тени */
+@keyframes pulseShadow {
+  0% {
+    box-shadow: 0 0 20px rgba(255, 105, 180, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 105, 180, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(255, 105, 180, 0.3);
+  }
 }
 </style> 
