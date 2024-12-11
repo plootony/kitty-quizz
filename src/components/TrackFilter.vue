@@ -1,61 +1,76 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+
+const props = defineProps({
+  totalTracks: {
+    type: Number,
+    default: 0
+  },
+  filteredCount: {
+    type: Number,
+    default: 0
+  }
+})
 
 const emit = defineEmits(['update:filters'])
 
 // Конфигурация фильтров
 const genres = [
-  { value: '', label: 'Все жанры' },
-  { value: 'rock', label: 'Рок' },
   { value: 'pop', label: 'Поп' },
+  { value: 'rock', label: 'Рок' },
   { value: 'hiphop', label: 'Хип-хоп' }
 ]
 
 const decades = [
-  { value: '', label: 'Все десятилетия' },
-  { value: '1970', label: '70-е' },
-  { value: '1980', label: '80-е' },
-  { value: '1990', label: '90-е' },
-  { value: '2000', label: '2000-е' },
-  { value: '2010', label: '2010-е' },
-  { value: '2020', label: '2020-е' }
+  { value: 2020, label: '2020-е' },
+  { value: 2010, label: '2010-е' },
+  { value: 2000, label: '2000-е' }
 ]
 
 const difficulties = [
-  { value: '', label: 'Любая сложность' },
   { value: 1, label: 'Легко' },
   { value: 2, label: 'Нормально' },
   { value: 3, label: 'Сложно' }
 ]
 
-// Состояния фильтров
-const selectedGenre = ref('')
-const selectedDecade = ref('')
-const selectedDifficulty = ref('')
-
-// Определение сложности по популярности
-const getDifficulty = (popularity) => {
-  if (popularity >= 55) return 'easy'
-  if (popularity >= 35) return 'medium'
-  return 'hard'
-}
+const filters = ref({
+  genre: '',
+  decade: '',
+  difficulty: ''
+})
 
 // Отслеживание изменений фильтров
-watch([selectedGenre, selectedDecade, selectedDifficulty], () => {
-  emit('update:filters', {
-    genre: selectedGenre.value,
-    decade: selectedDecade.value,
-    difficulty: selectedDifficulty.value
-  })
-})
+watch(filters, (newFilters) => {
+  emit('update:filters', newFilters)
+}, { deep: true })
+
+// Добавим сброс фильтров
+const resetFilters = () => {
+  filters.value = {
+    genre: '',
+    decade: '',
+    difficulty: ''
+  }
+  emit('update:filters', filters.value)
+}
 </script>
 
 <template>
   <div class="filter-container">
-    <!-- Фильтр по жанру -->
-    <div class="filter-group">
-      <label class="filter-label">Жанр</label>
-      <select v-model="selectedGenre" class="filter-select">
+    <div class="filter-stats">
+      <div class="stat-item">
+        <span class="stat-label">Всего треков:</span>
+        <span class="stat-value">{{ totalTracks }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">После фильтрации:</span>
+        <span class="stat-value">{{ filteredCount }}</span>
+      </div>
+    </div>
+
+    <div class="filters">
+      <select v-model="filters.genre">
+        <option value="">Все жанры</option>
         <option 
           v-for="genre in genres" 
           :key="genre.value" 
@@ -64,12 +79,9 @@ watch([selectedGenre, selectedDecade, selectedDifficulty], () => {
           {{ genre.label }}
         </option>
       </select>
-    </div>
 
-    <!-- Фильтр по десятилетию -->
-    <div class="filter-group">
-      <label class="filter-label">Десятилетие</label>
-      <select v-model="selectedDecade" class="filter-select">
+      <select v-model="filters.decade">
+        <option value="">Все декады</option>
         <option 
           v-for="decade in decades" 
           :key="decade.value" 
@@ -78,21 +90,22 @@ watch([selectedGenre, selectedDecade, selectedDifficulty], () => {
           {{ decade.label }}
         </option>
       </select>
-    </div>
 
-    <!-- Фильтр по сложности -->
-    <div class="filter-group">
-      <label class="filter-label">Сложность</label>
-      <select v-model="selectedDifficulty" class="filter-select">
+      <select v-model="filters.difficulty">
+        <option value="">Любая сложность</option>
         <option 
-          v-for="difficulty in difficulties" 
-          :key="difficulty.value" 
-          :value="difficulty.value"
+          v-for="diff in difficulties" 
+          :key="diff.value" 
+          :value="diff.value"
         >
-          {{ difficulty.label }}
+          {{ diff.label }}
         </option>
       </select>
     </div>
+
+    <button @click="resetFilters" class="reset-btn">
+      Сбросить фильтры
+    </button>
   </div>
 </template>
 
@@ -103,25 +116,19 @@ watch([selectedGenre, selectedDecade, selectedDifficulty], () => {
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   margin-bottom: 20px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 20px;
   border: 1px solid rgba(255, 105, 180, 0.2);
 }
 
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
 }
 
-.filter-label {
-  font-size: 0.9em;
-  color: #ff69b4;
-  font-weight: 500;
-}
-
-.filter-select {
+select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid rgba(255, 105, 180, 0.3);
@@ -138,37 +145,56 @@ watch([selectedGenre, selectedDecade, selectedDifficulty], () => {
   padding-right: 32px;
 }
 
-.filter-select:hover {
+select:hover {
   border-color: #ff69b4;
   background-color: rgba(255, 105, 180, 0.1);
 }
 
-.filter-select:focus {
+select:focus {
   outline: none;
   border-color: #ff69b4;
   box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.2);
 }
 
-.filter-select option {
+select option {
   background-color: #1a1a1a;
   color: #fff;
   padding: 8px;
 }
 
+.reset-btn {
+  padding: 10px 20px;
+  background-color: transparent;
+  color: #ff69b4;
+  border: 2px solid #ff69b4;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  width: fit-content;
+  align-self: center;
+}
+
+.reset-btn:hover {
+  background-color: rgba(255, 105, 180, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.2);
+}
+
 /* Адаптивный дизайн */
 @media (max-width: 768px) {
   .filter-container {
-    grid-template-columns: 1fr;
     gap: 15px;
   }
 
-  .filter-group {
+  .filters {
     margin-bottom: 0;
+    grid-template-columns: 1fr;
   }
 }
 
 /* Анимации */
-.filter-select {
+select {
   transition: all 0.2s ease;
 }
 
@@ -185,5 +211,29 @@ watch([selectedGenre, selectedDecade, selectedDifficulty], () => {
 
 .filter-container {
   animation: fadeIn 0.3s ease-out;
+}
+
+.filter-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 10px;
+  background: rgba(255, 105, 180, 0.05);
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-label {
+  color: #ff69b4;
+  font-size: 0.9em;
+  margin-right: 8px;
+}
+
+.stat-value {
+  font-weight: bold;
+  color: white;
 }
 </style> 

@@ -1,8 +1,9 @@
 <script setup>
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { supabase } from './lib/supabase'
 import TrackFilter from './components/TrackFilter.vue'
 import MusicQuiz from './components/MusicQuiz.vue'
+import DatabaseManager from './components/DatabaseManager.vue'
 
 const loading = ref(false)
 const error = ref(null)
@@ -10,20 +11,26 @@ const allTracks = ref([])
 
 const filteredTracks = computed(() => {
   return allTracks.value.filter(track => {
+    if (!filters.value.genre && !filters.value.decade && !filters.value.difficulty) {
+      return true
+    }
+    
     if (filters.value.genre && track.genre !== filters.value.genre) {
       return false
     }
     
     if (filters.value.decade) {
       const trackDecade = Math.floor(track.year / 10) * 10
-      if (trackDecade.toString() !== filters.value.decade) {
+      const selectedDecade = parseInt(filters.value.decade)
+      if (trackDecade !== selectedDecade) {
         return false
       }
     }
     
     if (filters.value.difficulty) {
       const difficulty = getDifficulty(track.popularity).level
-      if (difficulty !== parseInt(filters.value.difficulty)) {
+      const selectedDifficulty = parseInt(filters.value.difficulty)
+      if (difficulty !== selectedDifficulty) {
         return false
       }
     }
@@ -39,20 +46,40 @@ const filters = ref({
 })
 
 const handleFiltersUpdate = (newFilters) => {
+  console.log('Новые фильтры:', newFilters)
   filters.value = newFilters
+}
+
+// Добавим пагинацию для больших наборов данных
+const loadAllTracks = async () => {
+  const pageSize = 1000
+  const allData = []
+  let lastId = 0
+  
+  while (true) {
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .gt('id', lastId)
+      .order('id')
+      .limit(pageSize)
+    
+    if (error) throw error
+    if (!data || data.length === 0) break
+    
+    allData.push(...data)
+    lastId = data[data.length - 1].id
+    
+    if (data.length < pageSize) break
+  }
+  
+  return allData
 }
 
 onMounted(async () => {
   loading.value = true
   try {
-    const { data, error: supabaseError } = await supabase
-      .from('tracks')
-      .select('*')
-    
-    if (supabaseError) {
-      error.value = supabaseError.message
-      return
-    }
+    const data = await loadAllTracks()
     
     if (!data || data.length === 0) {
       error.value = 'Нет доступных треков. Пожалуйста, заполните базу данных.'
@@ -60,7 +87,7 @@ onMounted(async () => {
     }
     
     allTracks.value = data
-    console.log(`Загружено ${data.length} треков`)
+    console.log(`Загружено ${data.length} треков из базы данных`)
   } catch (err) {
     error.value = err.message
     console.error('Ошибка:', err)
@@ -70,9 +97,16 @@ onMounted(async () => {
 })
 
 const getDifficulty = (popularity) => {
-  if (popularity >= 55) return { level: 1, text: 'Легко 1' }
-  if (popularity >= 35) return { level: 2, text: 'Нормально' }
+  if (popularity >= 50) return { level: 1, text: 'Легко' }
+  if (popularity >= 40) return { level: 2, text: 'Нормально' }
   return { level: 3, text: 'Сложно' }
+}
+
+// Добавим вспомогательную функцию для отладки
+const getDifficultyText = (popularity) => {
+  if (popularity >= 50) return 'Легко (50-100)'
+  if (popularity >= 40) return 'Нормально (40-49)'
+  return 'Сложно (0-39)'
 }
 
 // Добавляем состояние для отслеживания активной игры
@@ -82,6 +116,35 @@ const isGameActive = ref(false)
 const handleGameStateChange = (state) => {
   isGameActive.value = state
 }
+
+// Добавим логирование для отладки
+watch(filteredTracks, (newTracks) => {
+  console.log('Фильтры:', filters.value)
+  console.log('Всего треков:', allTracks.value.length)
+  console.log('После фильтрации:', newTracks.length)
+  console.log('Примеры треков:', newTracks.slice(0, 3))
+})
+
+// Обновим отладочную информацию
+watch(filters, (newFilters) => {
+  console.log('Применяемые фильтры:', {
+    genre: newFilters.genre,
+    decade: newFilters.decade ? parseInt(newFilters.decade) : null,
+    difficulty: newFilters.difficulty ? parseInt(newFilters.difficulty) : null
+  })
+  
+  const examples = filteredTracks.value.slice(0, 3)
+  console.log('Примеры отфильтрованных треков:', examples.map(track => ({
+    name: track.name,
+    artist: track.artist,
+    year: track.year,
+    decade: Math.floor(track.year / 10) * 10,
+    popularity: track.popularity,
+    difficulty: getDifficulty(track.popularity).level,
+    difficultyText: getDifficultyText(track.popularity),
+    popularityScore: track.popularity
+  })))
+}, { deep: true })
 </script>
 
 <template>
@@ -102,7 +165,11 @@ const handleGameStateChange = (state) => {
     <TrackFilter 
       v-if="!loading && !error && !isGameActive" 
       @update:filters="handleFiltersUpdate" 
+      :total-tracks="allTracks.length"
+      :filtered-count="filteredTracks.length"
     />
+
+    <DatabaseManager v-if="!loading && !isGameActive" />
 
     <MusicQuiz 
       v-if="!loading && !error"
@@ -110,6 +177,10 @@ const handleGameStateChange = (state) => {
       :filters="filters"
       @game-state-change="handleGameStateChange"
     />
+
+    <div v-if="error" class="error-message">
+      {{ error }}
+    </div>
   </div>
 </template>
 
@@ -222,5 +293,15 @@ body {
       width: 150px;
     }
   }
+}
+
+.error-message {
+  background: rgba(211, 47, 47, 0.1);
+  border: 1px solid #d32f2f;
+  color: #ff6b6b;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 20px 0;
+  text-align: center;
 }
 </style>

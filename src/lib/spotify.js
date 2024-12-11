@@ -6,7 +6,11 @@ const REDIRECT_URI = `${window.location.origin}/callback`
 const SCOPES = [
   'streaming',
   'user-read-playback-state',
-  'user-modify-playback-state'
+  'user-modify-playback-state',
+  'user-read-email',
+  'user-read-private',
+  'playlist-modify-private',
+  'playlist-modify-public'
 ]
 
 const getSpotifyToken = async () => {
@@ -32,6 +36,7 @@ const getSpotifyToken = async () => {
   authUrl.searchParams.append('response_type', 'token')
   authUrl.searchParams.append('redirect_uri', REDIRECT_URI)
   authUrl.searchParams.append('scope', SCOPES.join(' '))
+  authUrl.searchParams.append('show_dialog', 'true')
   
   window.location.href = authUrl.toString()
 }

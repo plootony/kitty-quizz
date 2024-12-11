@@ -194,6 +194,49 @@ const revealAnswer = () => {
     startNewRound()
   }, 3000)
 }
+
+// Новый код воспроизведения через URI
+const playTrack = async (trackId) => {
+  try {
+    await fetch('https://api.spotify.com/v1/me/player/play', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        uris: [`spotify:track:${trackId}`]
+      })
+    })
+  } catch (error) {
+    console.error('Ошибка воспроизведения:', error)
+  }
+}
+
+// Форматированная отладочная информация
+const debugInfo = computed(() => {
+  if (!currentTrack.value) return ''
+  
+  const difficulty = computed(() => {
+    const p = currentTrack.value.popularity
+    if (p >= 50) return 'Легко (50-100)'
+    if (p >= 40) return 'Нормально (40-49)'
+    return 'Сложно (0-39)'
+  })
+
+  return JSON.stringify({
+    id: currentTrack.value.id,
+    spotify_id: currentTrack.value.spotify_id,
+    name: currentTrack.value.name,
+    artist: currentTrack.value.artist,
+    genre: currentTrack.value.genre,
+    year: currentTrack.value.year,
+    decade: Math.floor(currentTrack.value.year / 10) * 10,
+    popularity: currentTrack.value.popularity,
+    difficulty: difficulty.value,
+    image_url: currentTrack.value.image_url
+  }, null, 2)
+})
 </script>
 
 <template>
@@ -242,6 +285,12 @@ const revealAnswer = () => {
           <button @click="revealAnswer" class="reveal-btn">
             Показать ответ
           </button>
+          
+          <!-- Отладочная информация -->
+          <div v-if="currentTrack" class="debug-info">
+            <h3>Debug Info:</h3>
+            <pre>{{ debugInfo }}</pre>
+          </div>
         </div>
       </div>
     </div>
@@ -452,5 +501,30 @@ const revealAnswer = () => {
   100% {
     box-shadow: 0 0 20px rgba(255, 105, 180, 0.3);
   }
+}
+
+.debug-info {
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 105, 180, 0.3);
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 0.9em;
+  color: #ff69b4;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.debug-info h3 {
+  margin: 0 0 10px 0;
+  color: #ff69b4;
+  font-size: 1em;
+}
+
+.debug-info pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 </style> 
